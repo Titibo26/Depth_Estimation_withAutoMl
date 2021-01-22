@@ -52,12 +52,13 @@ namespace Depth_Estimation_ML.Depth_ML
 
             // STEP 1: Display first few rows of the training data.
             ConsoleHelper.ShowDataViewInConsole(mlContext, TrainDataView);
-
+            DataViewSchema.Column nc = new DataViewSchema.Column();
+       
 
             // STEP 2: Build a pre-featurizer for use in the AutoML experiment.
-            IEstimator<ITransformer> preFeaturizer = mlContext.Transforms.Conversion.MapValue("rgb_input",TrainDataView, TrainDataView.Schema[0], TrainDataView.Schema[0], TrainDataView.Schema[0].Name)
+             IEstimator<ITransformer> preFeaturizer = mlContext.Transforms.Conversion.MapValue("rgb_input",TrainDataView, TrainDataView.Schema[0], TrainDataView.Schema[0], TrainDataView.Schema[0].Name)
                .Append(mlContext.Transforms.Conversion.MapValue("depth_input", TrainDataView, TrainDataView.Schema[1], TrainDataView.Schema[1], TrainDataView.Schema[1].Name));
-
+           
             // STEP 3: Customize column information returned by InferColumns API.
             ColumnInformation columnInformation = columnInference.ColumnInformation;
             columnInformation.CategoricalColumnNames.Remove(TrainDataView.Schema[1].Name);
@@ -69,14 +70,12 @@ namespace Depth_Estimation_ML.Depth_ML
 
             columnInformation.ImagePathColumnNames.Remove("col1");
 
-            columnInformation.LabelColumnName.Remove(0);
-            columnInformation.LabelColumnName.Remove(1);
+            columnInformation.LabelColumnName.Remove(0, columnInformation.LabelColumnName.Length);
 
 
             columnInformation.IgnoredColumnNames.Add(TrainDataView.Schema[1].Name);
             columnInformation.IgnoredColumnNames.Add(TrainDataView.Schema[0].Name);
-            columnInformation.IgnoredColumnNames.Add("rgb_input");
-            columnInformation.IgnoredColumnNames.Add("depth_input");
+     
 
             IDataView FinalTrainDataView = preFeaturizer.Fit(TrainDataView).Transform(TrainDataView);
 
@@ -119,10 +118,12 @@ namespace Depth_Estimation_ML.Depth_ML
             var stopwatch = Stopwatch.StartNew();
             // Cancel experiment after the user presses any key.
             CancelExperimentAfterAnyKeyPress(cts);
-            ExperimentResult<RegressionMetrics> experimentResult = experiment.Execute(FinalTrainDataView, columnInformation, preFeaturizer, progressHandler);
+
+                ExperimentResult<RegressionMetrics> experimentResult = experiment.Execute(FinalTrainDataView, columnInformation, preFeaturizer, progressHandler);
+                Console.WriteLine($"{experimentResult.RunDetails.Count()} models were returned after {stopwatch.Elapsed.TotalSeconds:0.00} seconds{Environment.NewLine}");
+
             //ERROR THROWN : System.ArgumentException : 'Provided label column 'Label' was of type String, but only type Single is allowed.'
 
-            Console.WriteLine($"{experimentResult.RunDetails.Count()} models were returned after {stopwatch.Elapsed.TotalSeconds:0.00} seconds{Environment.NewLine}");
 
 
             /*
